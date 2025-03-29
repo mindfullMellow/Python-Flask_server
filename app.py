@@ -1,12 +1,15 @@
 import os
+import time
 import requests
 from flask import Flask, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enables CORS for all routes
+CORS(app)
 
 COINGECKO_API_URL = "https://api.coingecko.com/api/v3/coins/markets"
+CACHE = {"data": None, "timestamp": 0}
+CACHE_DURATION = 60  # Cache API response for 60 seconds
 
 @app.route('/')
 def home():
@@ -14,6 +17,12 @@ def home():
 
 @app.route('/crypto-data')
 def get_crypto_data():
+    global CACHE
+
+    # Check if cache is still valid
+    if time.time() - CACHE["timestamp"] < CACHE_DURATION and CACHE["data"]:
+        return jsonify(CACHE["data"])  # Return cached data
+
     params = {
         "vs_currency": "usd",
         "order": "market_cap_desc",
@@ -26,20 +35,22 @@ def get_crypto_data():
         response = requests.get(COINGECKO_API_URL, params=params)
         data = response.json()
         
-        print("Full API Response:", data)  # Debugging log
-        
-        if not isinstance(data, list):  # If API response is not a list, return error
+        if not isinstance(data, list):
             return jsonify({"error": "Unexpected API response format", "response": data})
 
         filtered_data = {
-            coin.get("id"): {
-                "usd": coin.get("current_price"),
-                "usd_market_cap": coin.get("market_cap"),
-                "usd_24h_vol": coin.get("total_volume"),
-                "usd_24h_change": coin.get("price_change_percentage_24h")
+            coin["id"]: {
+                "usd": coin["current_price"],
+                "usd_market_cap": coin["market_cap"],
+                "usd_24h_vol": coin["total_volume"],
+                "usd_24h_change": coin["price_change_percentage_24h"]
             }
-            for coin in data if coin.get("id")  # Avoids processing invalid data
+            for coin in data
         }
+        
+        # Store in cache
+        CACHE["data"] = filtered_data
+        CACHE["timestamp"] = time.time()
         
         return jsonify(filtered_data)
     except Exception as e:
