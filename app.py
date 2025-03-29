@@ -1,48 +1,30 @@
 import os
 import requests
 from flask import Flask, jsonify
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
 
-# List of cryptocurrencies to fetch data for
-cryptos = [
-    'bitcoin', 'solana', 'ripple', 'pepe', 'polkadot', 'dogecoin', 
-    'raydium', 'okb', 'uniswap', 'ethereum', 'tether', 'binancecoin'
-]
+COINGECKO_API_KEY = "CG-75vCP2UBBY936h9FgAAtfNKQ"
+COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"
 
-# Home route to prevent 404 error
 @app.route('/')
 def home():
-    return "Welcome to the Flask API!"
+    return jsonify({"message": "Welcome to the Crypto API"})
 
-# Route to fetch crypto data
 @app.route('/crypto-data')
-def crypto_data():
+def get_crypto_data():
+    params = {
+        "ids": "bitcoin",
+        "vs_currencies": "usd",
+        "x_cg_pro_api_key": COINGECKO_API_KEY  # Free API users should remove this line
+    }
+    
     try:
-        # Get API key from environment variables
-        api_key = os.environ.get("KEY")
-
-        if not api_key:
-            return jsonify({"error": "API key is missing"}), 500
-
-        # CoinGecko API URL with API key
-        url = (
-            f"https://api.coingecko.com/api/v3/simple/price"
-            f"?ids={','.join(cryptos)}&vs_currencies=usd"
-            "&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true"
-            f"&x_cg_pro_api_key={api_key}"
-        )
-
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            return jsonify(response.json())
-        else:
-            return jsonify({"error": "Failed to fetch data"}), response.status_code
+        response = requests.get(COINGECKO_API_URL, params=params)
+        data = response.json()
+        return jsonify(data)
     except Exception as e:
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"error": "Failed to fetch data", "details": str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True)
