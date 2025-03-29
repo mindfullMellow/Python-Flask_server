@@ -15,7 +15,7 @@ def get_crypto_data():
     params = {
         "vs_currency": "usd",
         "order": "market_cap_desc",
-        "per_page": 250,  # Fetches top 250 coins
+        "per_page": 250,
         "page": 1,
         "sparkline": False
     }
@@ -24,10 +24,9 @@ def get_crypto_data():
         response = requests.get(COINGECKO_API_URL, params=params)
         data = response.json()
         
-        if not isinstance(data, list):  # Ensure the response is a list
+        if not isinstance(data, list):  
             return jsonify({"error": "Unexpected API response format"})
 
-        # Convert list to a dictionary with coin IDs as keys
         filtered_data = {
             coin["id"]: {
                 "usd": coin["current_price"],
