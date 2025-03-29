@@ -24,18 +24,19 @@ def get_crypto_data():
         response = requests.get(COINGECKO_API_URL, params=params)
         data = response.json()
         
-        # Filter only needed data
-        filtered_data = [
-            {
-                "id": coin["id"],
-                "symbol": coin["symbol"],
-                "price": coin["current_price"],
-                "market_cap": coin["market_cap"],
-                "volume": coin["total_volume"],
-                "change_24h": coin["price_change_percentage_24h"]
+        if not isinstance(data, list):  # Ensure the response is a list
+            return jsonify({"error": "Unexpected API response format"})
+
+        # Convert list to a dictionary with coin IDs as keys
+        filtered_data = {
+            coin["id"]: {
+                "usd": coin["current_price"],
+                "usd_market_cap": coin["market_cap"],
+                "usd_24h_vol": coin["total_volume"],
+                "usd_24h_change": coin["price_change_percentage_24h"]
             }
             for coin in data
-        ]
+        }
         
         return jsonify(filtered_data)
     except Exception as e:
