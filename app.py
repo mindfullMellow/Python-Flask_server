@@ -1,48 +1,43 @@
+import os
 import requests
 from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"
+COINGECKO_API_URL = "https://api.coingecko.com/api/v3/coins/markets"
 
 @app.route('/')
 def home():
-    return jsonify({
-        "message": "Welcome to the Crypto API",
-        "status": "Running",
-        "available_route": "/crypto-data",
-        "cryptos": [
-            "bitcoin", "ethereum", "solana", "binancecoin", "ripple", 
-            "cardano", "dogecoin", "polkadot", "matic-network", "litecoin",
-            "pepe", "dogwifhat", "raydium", "okb", "uniswap", "tether"
-        ]
-    })
+    return jsonify({"message": "Welcome to the Crypto API"})
 
 @app.route('/crypto-data')
 def get_crypto_data():
     params = {
-        "ids": "bitcoin,ethereum,solana,binancecoin,ripple,cardano,dogecoin,polkadot,"
-               "matic-network,litecoin,pepe,dogwifhat,raydium,okb,uniswap,tether",
-        "vs_currencies": "usd",
-        "include_market_cap": "true",  
-        "include_24hr_vol": "true",    
-        "include_24hr_change": "true"
+        "vs_currency": "usd",
+        "order": "market_cap_desc",
+        "per_page": 250,  # Fetches top 250 coins
+        "page": 1,
+        "sparkline": False
     }
     
     try:
         response = requests.get(COINGECKO_API_URL, params=params)
-        raw_data = response.json()
+        data = response.json()
         
-        formatted_data = {}
-        for crypto, details in raw_data.items():
-            formatted_data[crypto] = {
-                "price_id": details["usd"],
-                "market_cap_id": details.get("usd_market_cap", "N/A"),
-                "volume_id": details.get("usd_24h_vol", "N/A"),
-                "change_24h_id": round(details.get("usd_24h_change", 0), 2)
+        # Filter only needed data
+        filtered_data = [
+            {
+                "id": coin["id"],
+                "symbol": coin["symbol"],
+                "price": coin["current_price"],
+                "market_cap": coin["market_cap"],
+                "volume": coin["total_volume"],
+                "change_24h": coin["price_change_percentage_24h"]
             }
+            for coin in data
+        ]
         
-        return jsonify(formatted_data)
+        return jsonify(filtered_data)
     except Exception as e:
         return jsonify({"error": "Failed to fetch data", "details": str(e)})
 
