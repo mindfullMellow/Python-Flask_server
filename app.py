@@ -1,40 +1,42 @@
+import os
+import requests
 from flask import Flask, jsonify
 from flask_cors import CORS
-import requests
 
 app = Flask(__name__)
 CORS(app)
 
-# List of cryptocurrencies to fetch data for
+# List of cryptocurrencies to fetch
 cryptos = [
-    'bitcoin', 'solana', 'ripple', 'pepe', 'polkadot', 'dogecoin', 
+    'bitcoin', 'solana', 'ripple', 'pepe', 'polkadot', 'dogecoin',
     'raydium', 'okb', 'uniswap', 'ethereum', 'tether', 'binancecoin'
 ]
 
-# New route added to fix the 404 error
-@app.route('/')
-def home():
-    return jsonify({"message": "Welcome to the Crypto API!"})  # Simple JSON response for the home route
+# Get API key from environment variable
+API_KEY = os.getenv("KEY")
 
 @app.route('/crypto-data')
 def crypto_data():
     try:
-        # Constructing the API URL to fetch crypto prices
+        # Construct the API URL with the API key
         url = (
             "https://api.coingecko.com/api/v3/simple/price"
             f"?ids={','.join(cryptos)}&vs_currencies=usd"
             "&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true"
+            f"&x_cg_api_key={API_KEY}"
         )
 
-        response = requests.get(url)  # Making the request
+        response = requests.get(url)
 
         if response.status_code == 200:
-            data = response.json()  # Parsing the response
-            return jsonify(data)  # Returning the data as JSON
+            return jsonify(response.json())
+        elif response.status_code == 429:
+            return jsonify({"error": "Rate limit exceeded. Try again later."}), 429
         else:
-            return jsonify({"error": "Failed to fetch data"}), response.status_code  # Handling request failure
+            return jsonify({"error": "Failed to fetch data"}), response.status_code
+
     except Exception as e:
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500  # Handling unexpected errors
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)  # Running the Flask app
+    app.run(debug=True)
